@@ -1,0 +1,47 @@
+\documentclass{prose-report}
+\usepackage[
+  paperheight=6in,
+  paperwidth=5in,
+  margin=0.3in,
+  heightrounded,
+  %showframe
+]{geometry}
+%\usepackage{graphicx}
+\usepackage[demo]{graphicx}
+\usepackage[table]{xcolor}
+\usepackage{tabularx}
+\usepackage{roboto}
+\usepackage{relsize}
+
+\newcommand{\VAR}[1]{#1}
+\newcommand{\BLOCK}[1]{}
+
+\begin{document}{\fontfamily{cmss}\selectfont
+\hspace{14pt}{\large \VAR{target}}\vspace{-13pt}
+
+\hspace{15pt}{\scriptsize\textit{\VAR{description}}}
+
+\begin{minipage}[t]{0.6\textwidth}
+    \mbox{\hspace{-0.5cm}\includegraphics[width=\linewidth]{\VAR{figure_lightcurve}}}
+\end{minipage}
+\begin{minipage}[t]{0.4\textwidth}
+  \mbox{\hspace{-0.15cm}\includegraphics[width=\linewidth]{\VAR{figure_stack}}}
+\end{minipage}
+
+% INFO table
+% ----------
+\boxtitle{INFO}
+\vspace{-20pt}
+
+
+{\scriptsize
+\begin{tabular}{|m{0.42\linewidth}|m{0.42\linewidth}|}
+    \BLOCK{for name, value in table_observation}
+        \hline
+        \textcolor{black!50}{\VAR{name}} & \VAR{value}\\
+    \BLOCK{endfor}
+    \hline
+\end{tabular}}
+% ----------
+
+}\end{document}

@@ -4,24 +4,44 @@ import shutil
 import jinja2
 from .. import viz
 from pathlib import Path
+from ..console_utils import error, info
 
 
-template_folder = path.abspath(path.join(path.dirname(__file__), "..", "..", "latex"))
+TEMPLATES_FOLDER = path.abspath(path.join(path.dirname(__file__), "..", "..", "latex"))
+MULTIPAGE_TEMPLATE = "report.tex"
+JINJA_ENV = jinja2.Environment(
+    block_start_string='\BLOCK{',
+    block_end_string='}',
+    variable_start_string='\VAR{',
+    variable_end_string='}',
+    comment_start_string='\#{',
+    comment_end_string='}',
+    line_statement_prefix='%%',
+    line_comment_prefix='%#',
+    trim_blocks=True,
+    autoescape=False,
+    loader=jinja2.FileSystemLoader(TEMPLATES_FOLDER)
+)
 
-
-class LatexTemplate:
-    def __init__(self, template_name, style="paper"):
+class Report:
+    def __init__(self, template_name, data=None, style="paper", demo=False):
         self.template_name = template_name
         self._style = style
         self.template = None
         self.dpi=150
-        self.load_template()
 
         # to be set
         self.destination = None
         self.report_name = None
         self.figure_destination = None
         self.tex_destination = None
+        if data is None:
+            data = {}
+        self.data = data
+        self.demo = demo
+        self.data["__demo"] = demo
+
+        self.template = JINJA_ENV.get_template(self.template_name)
 
     def style(self):
         if self._style == "paper":
@@ -33,22 +53,6 @@ class LatexTemplate:
     def clean_name(self):
         return self.template_name.replace(".tex", "")
 
-    def load_template(self):
-        latex_jinja_env = jinja2.Environment(
-            block_start_string='\BLOCK{',
-            block_end_string='}',
-            variable_start_string='\VAR{',
-            variable_end_string='}',
-            comment_start_string='\#{',
-            comment_end_string='}',
-            line_statement_prefix='%%',
-            line_comment_prefix='%#',
-            trim_blocks=True,
-            autoescape=False,
-            loader=jinja2.FileSystemLoader(template_folder)
-        )
-        self.template = latex_jinja_env.get_template(self.template_name)
-
     def make_report_folder(self, destination, figures=True):
         destination = Path(destination)
         destination.mkdir(exist_ok=True)
@@ -58,13 +62,38 @@ class LatexTemplate:
             self.figure_destination =  destination / "figures"
             self.figure_destination.mkdir(exist_ok=True)
         self.tex_destination = destination / f"{self.report_name}.tex"
+        shutil.copyfile(path.join(TEMPLATES_FOLDER, "prose-report.cls"), path.join(self.destination, "prose-report.cls"))
 
 
-class Report(LatexTemplate):
+    def make(self):
+        shutil.copyfile(path.join(TEMPLATES_FOLDER, "prose-report.cls"), path.join(self.destination, "prose-report.cls"))
+        latex = self.template.render(**self.data)
+        multipage_template = JINJA_ENV.get_template(MULTIPAGE_TEMPLATE)
+        open(self.tex_destination, "w").write(multipage_template.render(
+            latexs = [latex],
+            __demo = self.demo
+        ))
 
+    def compile(self, clean=True):
+        cwd = os.getcwd()
+        os.chdir(self.destination)
+        os.system(f"pdflatex {self.report_name}")
+        os.chdir(cwd)
+        if clean:
+            self.remove_folder()
+    
+    def remove_folder(self):
+        pdf_name = self.destination / f"{self.report_name}.pdf"
+        shutil.copy(pdf_name, self.destination.parent)
+        shutil.rmtree(self.destination)
+
+
+class _Report:
     def __init__(self, reports, template_name="report.tex"):
         LatexTemplate.__init__(self, template_name)
         self.reports = reports
+        if isinstance(reports, str):
+            self.reports = [LatexTemplate(reports)]
         self.paths = None
 
     def compile(self):
@@ -75,19 +104,17 @@ class Report(LatexTemplate):
 
     def make(self, destination):
         self.make_report_folder(destination, figures=False)
-        shutil.copyfile(path.join(template_folder, "prose-report.cls"), path.join(destination, "prose-report.cls"))
+        shutil.copyfile(path.join(TEMPLATES_FOLDER, "prose-report.cls"), path.join(destination, "prose-report.cls"))
         tex_destination = path.join(self.destination, f"{self.report_name}.tex")
 
         self.paths = []
         for report in self.reports:
-            print(f"making {report.clean_name} ...")
-            report_path = path.join(destination, report.clean_name)
-            report.make(report_path)
-            self.paths.append(path.join(report.clean_name, report.clean_name))
+            info(f"making {report.clean_name} ...")
+            report.make(destination)
+            self.paths.append(report.tex_destination)
 
-        open(tex_destination, "w").write(self.template.render(
-            paths=self.paths
-        ))
+        open(tex_destination, "w").write(self.template.render(paths=self.paths))
+
 
 
 def copy_figures(folder, prefix, destination):

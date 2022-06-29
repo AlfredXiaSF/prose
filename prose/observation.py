@@ -338,7 +338,7 @@ class Observation(ApertureFluxes):
     # Plot
     # ----
 
-    def plot_comps_lcs(self, n=15, ylim=None):
+    def plot_comps_lcs(self, n=15, ylim=None, title=True):
         """Plot comparison stars light curves along target star light curve
 
         Parameters
@@ -365,7 +365,8 @@ class Observation(ApertureFluxes):
             plt.annotate(idxs[i], (self.time.min() + 0.005, - i * offset + offset/3))
 
         plt.ylim(-len(lcs)*offset + offset/2, offset/2)
-        plt.title("Comparison stars", loc="left")
+        if title:
+            plt.title("Comparison stars", loc="left")
         plt.grid(color="whitesmoke")
         plt.tight_layout()
 
@@ -470,7 +471,7 @@ class Observation(ApertureFluxes):
                     f"angle: {self.stack.theta/np.pi*180:.2f}°", c="w")
 
 
-    def plot_systematics(self, fields=None, ylim=None):
+    def plot_systematics(self, fields=None, ylim=None, title=True):
         """Plot systematics measurements along target light curve
 
         Parameters
@@ -519,7 +520,8 @@ class Observation(ApertureFluxes):
                 i -= 1
 
         plt.ylim(1 - off - offset, 1 + offset)
-        plt.title("Systematics (scaled to diff. flux)", loc="left")
+        if title:
+            plt.title("Systematics (scaled to diff. flux)", loc="left")
         plt.tight_layout()
 
     def plot_raw_diff(self):

@@ -1,10 +1,15 @@
 \documentclass{prose-report}
 \usepackage[T1]{fontenc}
+%% if __demo
+\usepackage[demo]{graphicx}
+%% else
 \usepackage{graphicx}
+%% endif
 \usepackage[table]{xcolor}
 \usepackage{roboto}
 \usepackage{fancyhdr}
 \usepackage{hyperref}
+\usepackage[top=0.6cm, bottom=1cm, outer=1cm, inner=1cm, heightrounded, landscape]{geometry}
 
 % This report has been auto generate by prose
 % For mor details see https://prose.readthedocs.io/en/dev
@@ -18,17 +23,23 @@
     urlcolor=gray!50,
 }
 
+\newcommand{\noimage}{
+  \setlength{\fboxsep}{-\fboxrule}
+  \fbox{\phantom{\rule{150pt}{100pt}}}
+}
+
 \pagestyle{fancy}
 \fancyhf{}
 \rfoot{\thepage}
 %================
 
 \begin{document}
-{\fontfamily{cmss}\selectfont
 
-\BLOCK{for path in paths}
-      \newpage
-      \include{\VAR{path}}
+\BLOCK{for latex in latexs}
+      \VAR{latex}
+      %% if latexs | length > 1
+        \newpage
+      %% endif
 \BLOCK{endfor}
 
 \end{document}

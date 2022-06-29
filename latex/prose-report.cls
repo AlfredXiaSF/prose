@@ -4,6 +4,7 @@
 \RequirePackage{calc}
 \RequirePackage{changepage}
 \LoadClass[10pt]{article}
+\RequirePackage{fix-cm}
 
 % \DeclareOption{onecolumn}{\OptionNotUsed}
 % \DeclareOption{green}{\renewcommand{\headlinecolor}{\color{green}}}
@@ -95,4 +96,4 @@
 
 % GEOMETRY AND DOCUMENT INFO
 % ------------------------
-\RequirePackage[top=0.6cm, bottom=1cm, outer=1cm, inner=1cm, heightrounded, landscape]{geometry}
+%\RequirePackage[top=0.6cm, bottom=1cm, outer=1cm, inner=1cm, heightrounded, landscape]{geometry}
