@@ -19,6 +19,8 @@ from .utils import fast_binning, z_scale, clean_header
 from .console_utils import info, warning, error
 from . import blocks
 from prose import Sequence
+from astropy.io import fits
+from astropy.wcs import WCS
 from matplotlib import gridspec
 from .blocks import catalogs
 
@@ -1072,3 +1074,10 @@ class Observation(ApertureFluxes):
         if verbose:
             info(f"target = {i}")
 
+def import_stack(self, fitsfile):
+    data = fits.getdata(fitsfile)
+    header = fits.getheader(fitsfile)
+
+    self.stack.wcs = WCS(header)
+    self.xarray.attrs.update(utils.header_to_cdf4_dict(header))
+    self.xarray["stack"] = (('w', 'h'), data)
