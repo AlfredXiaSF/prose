@@ -705,8 +705,8 @@ class Observation(ApertureFluxes):
 
         plt.axis("off")
         center = (n+0.5, n+0.5)
-        if aperture is not None:
-            ax2.add_patch(plt.Circle(center, aperture, ec='grey', fill=False, lw=2))
+        #if aperture is not None:
+        ax2.add_patch(plt.Circle(center, ap, ec='grey', fill=False, lw=2))
         if rin is not None:
             ax2.add_patch(plt.Circle(center, rin, ec='grey', fill=False, lw=2))
         if rout is not None:
