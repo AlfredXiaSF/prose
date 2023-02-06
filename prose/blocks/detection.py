@@ -13,12 +13,11 @@ __all__ = [
     "SegmentedPeaks", 
     "DAOFindStars", 
     "SEDetection", 
-    "Peaks", 
     "AutoSourceDetection", 
     "PointSourceDetection"
 ]
 
-class SourceDetection(Block):
+class _SourceDetection(Block):
     """Base class for sources detection.
     """
     def __init__(
@@ -87,7 +86,7 @@ class SourceDetection(Block):
         
         return regions
     
-class AutoSourceDetection(SourceDetection):
+class AutoSourceDetection(_SourceDetection):
 
     def __init__(
         self, 
@@ -114,7 +113,7 @@ class AutoSourceDetection(SourceDetection):
         sources = np.array([auto_source(region) for region in regions])
         image.sources = Sources(self.clean(sources))
     
-class PointSourceDetection(SourceDetection):
+class PointSourceDetection(_SourceDetection):
 
     def __init__(
         self, 
@@ -143,7 +142,7 @@ class PointSourceDetection(SourceDetection):
         return "scikit-image", "scipy"
 
 
-class TraceDetection(SourceDetection):
+class TraceDetection(_SourceDetection):
 
     def __init__(self, min_length=5, **kwargs):
         super().__init__(**kwargs)
@@ -192,27 +191,7 @@ class SegmentedPeaks(PointSourceDetection):
         self.min_area = min_area
         self.minor_length = minor_length
 
-class Peaks(Block):
-
-    
-    def __init__(self, cutout=11, **kwargs):
-        super().__init__(**kwargs)
-        self.cutout = cutout
-
-    def run(self, image, **kwargs):
-        idxs, cuts = cutouts(image.data, image.stars_coords, size=self.cutout)
-        peaks = np.ones(len(image.stars_coords)) * -1
-        for j, i in enumerate(idxs):
-            cut = cuts[j]
-            if cut is not None:
-                peaks[i] = np.max(cut.data)
-        image.peaks = peaks
-
-    @property
-    def citations(self):
-        return "photutils"
-
-class _SimplePointSourceDetection(SourceDetection):
+class _SimplePointSourceDetection(_SourceDetection):
 
     def __init__(
         self, 

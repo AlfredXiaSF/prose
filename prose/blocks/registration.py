@@ -16,7 +16,6 @@ def distances(coords, coord):
         for x, y in zip(coords[0].flatten(), coords[1].flatten())
     ]
 
-
 def clean_stars_positions(positions, tolerance=50, output_id=False):
     keep = []
 

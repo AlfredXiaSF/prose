@@ -43,7 +43,8 @@ __all__ = [
     "XArray2",
     "MPCalibration",
     "Del",
-    "Function"
+    "Function",
+    "Peaks"
 ]
 
 class DataBlock(Block):
@@ -380,7 +381,6 @@ class Get(DataBlock):
             return self.values[key]
         else:
             super().__getattribute__(key)
-
 
     def __call__(self, *names):
         if len(names) == 0:
@@ -893,3 +893,24 @@ class Drizzle(Block):
     adsurl = {https://ui.adsabs.harvard.edu/abs/2002PASP..114..144F},
     adsnote = {Provided by the SAO/NASA Astrophysics Data System}
 }"""}
+
+
+class Peaks(Block):
+
+    
+    def __init__(self, cutout=11, **kwargs):
+        super().__init__(**kwargs)
+        self.cutout = cutout
+
+    def run(self, image, **kwargs):
+        idxs, cuts = cutouts(image.data, image.stars_coords, size=self.cutout)
+        peaks = np.ones(len(image.stars_coords)) * -1
+        for j, i in enumerate(idxs):
+            cut = cuts[j]
+            if cut is not None:
+                peaks[i] = np.max(cut.data)
+        image.peaks = peaks
+
+    @property
+    def citations(self):
+        return "photutils"

@@ -416,11 +416,41 @@ class TestSourceAndDetection(unittest.TestCase):
         print(computed, expected)
         assert np.abs(computed - expected) < 1, ""
 
-class TestArgsRegistration(unittest.TestCase):
+import inspect
+import sys
+
+def classes(module, sublcasses):
+    class_members = inspect.getmembers(
+        sys.modules[module], 
+        inspect.isclass
+    )
+
+    def mask(n, c): return issubclass(c, sublcasses) and n[0] != "_"
+            
+    return [c for n, c in class_members if mask(n, c)]
+
+class TestBlocks(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         unittest.TestCase.__init__(self, *args, **kwargs)
+        self.blocks = []
 
+    def load(self, module, subclasses):
+        self.blocks = classes(module, subclasses)
+
+    def test_all(self):
+        for block in self.blocks:
+            with self.subTest(block=block.__name__):
+                block().run(self.image)
+
+class TestBlocksDetection(TestBlocks):
+
+    def __init__(self, *args, **kwargs):
+        TestBlocks.__init__(self, *args, **kwargs)
+        from prose.blocks.detection import _SourceDetection
+        self.load("prose.blocks.detection", _SourceDetection)
+        self.image = example_image()
+        
 
 if __name__ == "__main__":
     unittest.main()
