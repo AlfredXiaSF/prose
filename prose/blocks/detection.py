@@ -10,25 +10,26 @@ from photutils import DAOStarFinder
 from ..blocks.psf import cutouts
 
 __all__ = [
-    "SegmentedPeaks", 
-    "DAOFindStars", 
-    "SEDetection", 
-    "AutoSourceDetection", 
-    "PointSourceDetection"
+    "SegmentedPeaks",
+    "DAOFindStars",
+    "SEDetection",
+    "AutoSourceDetection",
+    "PointSourceDetection",
 ]
 
+
 class _SourceDetection(Block):
-    """Base class for sources detection.
-    """
+    """Base class for sources detection."""
+
     def __init__(
-        self, 
-        threshold=4, 
-        n=None, 
-        sort=True, 
-        min_separation=None, 
-        name=None, 
-        min_area=0, 
-        minor_length=0
+        self,
+        threshold=4,
+        n=None,
+        sort=True,
+        min_separation=None,
+        name=None,
+        min_area=0,
+        minor_length=0,
     ):
         super().__init__(name=name)
         self.n = n
@@ -37,103 +38,104 @@ class _SourceDetection(Block):
         self.threshold = threshold
         self.min_area = min_area
         self.minor_length = minor_length
-        
+
     def clean(self, sources, *args):
         peaks = np.array([s.peak for s in sources])
         coords = np.array([s.coords for s in sources])
         _sources = sources.copy()
-        
+
         if len(sources) > 0:
             if self.sort:
                 idxs = np.argsort(peaks)[::-1]
                 _sources = sources[idxs]
             if self.n is not None:
-                _sources = _sources[0:self.n]
+                _sources = _sources[0 : self.n]
             if self.min_separation:
-                idxs = clean_stars_positions(_sources, tolerance=self.min_separation)
+                idxs = clean_stars_positions(
+                    coords, tolerance=self.min_separation, output_id=True
+                )[1]
                 _sources = _sources[idxs]
 
             for i, s in enumerate(_sources):
                 s.i = i
-                
+
             return _sources
 
         else:
             return None
-    
+
     # TODO: obsolete, redo
     def auto_threshold(self, image):
         if self.verbose:
             info("SegmentedPeaks threshold optimisation ...")
         thresholds = np.exp(np.linspace(np.log(1.5), np.log(500), 30))
         detected = [len(self._regions(image, t)) for t in thresholds]
-        self.threshold = interp1d(detected, thresholds, fill_value="extrapolate")(self.n_stars)
-        
+        self.threshold = interp1d(detected, thresholds, fill_value="extrapolate")(
+            self.n_stars
+        )
+
         if self.verbose:
             info(f"threshold = {self.threshold:.2f}")
-        
+
     def regions(self, image, threshold=None):
         flat_data = image.data.flatten()
         median = np.median(flat_data)
         if threshold is None:
             threshold = self.threshold
-                    
-        flat_data = flat_data[np.abs(flat_data - median) < np.nanstd(flat_data)]
-        threshold = threshold*np.nanstd(flat_data) + median
-            
-        regions = regionprops(label(image.data > threshold), image.data)
-        regions = [r for r in regions if r.area > self.min_area and r.axis_minor_length > self.minor_length]
-        
-        return regions
-    
-class AutoSourceDetection(_SourceDetection):
 
+        flat_data = flat_data[np.abs(flat_data - median) < np.nanstd(flat_data)]
+        threshold = threshold * np.nanstd(flat_data) + median
+
+        regions = regionprops(label(image.data > threshold), image.data)
+        regions = [
+            r
+            for r in regions
+            if r.area > self.min_area and r.axis_minor_length > self.minor_length
+        ]
+
+        return regions
+
+
+class AutoSourceDetection(_SourceDetection):
     def __init__(
-        self, 
-        threshold=4, 
-        n=None, 
-        sort=True, 
-        min_separation=None, 
-        name=None, 
-        min_area=0, 
-        minor_length=0
+        self,
+        threshold=4,
+        n=None,
+        sort=True,
+        min_separation=None,
+        name=None,
+        min_area=0,
+        minor_length=0,
     ):
         super().__init__(
-            threshold=threshold, 
-            n=n, 
-            sort=sort, 
-            min_separation=min_separation, 
-            name=name, 
+            threshold=threshold,
+            n=n,
+            sort=sort,
+            min_separation=min_separation,
+            name=name,
             min_area=min_area,
-            minor_length=minor_length
-            )
+            minor_length=minor_length,
+        )
 
     def run(self, image):
         regions = self.regions(image)
         sources = np.array([auto_source(region) for region in regions])
         image.sources = Sources(self.clean(sources))
-    
+
+
 class PointSourceDetection(_SourceDetection):
-
-    def __init__(
-        self, 
-        unit_euler=False, 
-        min_area=3, 
-        minor_length=2,
-        **kwargs
-    ):
-
+    def __init__(self, unit_euler=False, min_area=3, minor_length=2, **kwargs):
         super().__init__(min_area=min_area, minor_length=minor_length, **kwargs)
         self.unit_euler = unit_euler
         self.min_area = min_area
         self.minor_length = minor_length
-    
+
     def run(self, image):
         regions = self.regions(image)
         if self.unit_euler:
             idxs = np.flatnonzero([r.euler_number == 1 for r in regions])
             regions = [regions[i] for i in idxs]
-            
+
         sources = np.array([PointSource(region) for region in regions])
         image.sources = PointSources(self.clean(sources))
 
@@ -143,15 +145,14 @@ class PointSourceDetection(_SourceDetection):
 
 
 class TraceDetection(_SourceDetection):
-
     def __init__(self, min_length=5, **kwargs):
         super().__init__(**kwargs)
         self.min_length = min_length
-    
+
     def run(self, image):
         regions = self.regions(image)
         regions = [r for r in regions if r.axis_major_length > self.min_length]
-            
+
         sources = np.array([TraceSource(region) for region in regions])
         image.sources = Sources(sources)
 
@@ -159,52 +160,44 @@ class TraceDetection(_SourceDetection):
     def citations(self):
         return "scikit-image", "scipy"
 
-class LimitStars(Block):
 
+class LimitStars(Block):
     def __init__(self, min=4, max=10000, **kwargs):
         super().__init__(**kwargs)
         self.min = min
         self.max = max
-        
+
     def run(self, image):
-        n = len(image.sources) 
+        n = len(image.sources)
         if n == 0:
             image.discard = True
         else:
             if n < self.min or n > self.max:
                 image.discard = True
 
+
 # backward compatibility
 class SegmentedPeaks(PointSourceDetection):
-
     def __init__(
-        self, 
-        unit_euler=False, 
-        min_area=3, 
-        minor_length=2,
-        n_stars=None,
-        **kwargs
+        self, unit_euler=False, min_area=3, minor_length=2, n_stars=None, **kwargs
     ):
-
-        super().__init__(n=n_stars, min_area=min_area, minor_length=minor_length, **kwargs)
+        super().__init__(
+            n=n_stars, min_area=min_area, minor_length=minor_length, **kwargs
+        )
         self.unit_euler = unit_euler
         self.min_area = min_area
         self.minor_length = minor_length
 
-class _SimplePointSourceDetection(_SourceDetection):
 
-    def __init__(
-        self, 
-        n_stars=None,
-        min_separation=None, 
-        sort=True,
-        name=None
-    ):
-        super().__init__(n=n_stars, sort=sort,  min_separation=min_separation, name=name)
+class _SimplePointSourceDetection(_SourceDetection):
+    def __init__(self, n_stars=None, min_separation=None, sort=True, name=None):
+        super().__init__(n=n_stars, sort=sort, min_separation=min_separation, name=name)
 
     def run(self, image):
         coordinates, peaks = self.detect(image)
-        sources = np.array([PointSource(coords=c, peak=p) for c, p in zip(coordinates, peaks)])
+        sources = np.array(
+            [PointSource(coords=c, peak=p) for c, p in zip(coordinates, peaks)]
+        )
         image.sources = PointSources(self.clean(sources))
 
 
@@ -213,7 +206,7 @@ class DAOFindStars(_SimplePointSourceDetection):
     DAOPHOT stars detection with :code:`photutils` implementation.
 
     |write| ``Image.stars_coords`` and ``Image.peaks``
-    
+
     Parameters
     ----------
     sigma_clip : float, optional
@@ -225,22 +218,24 @@ class DAOFindStars(_SimplePointSourceDetection):
     n_stars : int, optional
         maximum number of stars to consider, by default None
     min_separation : float, optional
-        minimum separation between sources, by default 5.0. If less than that, close sources are merged 
+        minimum separation between sources, by default 5.0. If less than that, close sources are merged
     sort : bool, optional
         whether to sort stars coordinates from the highest to the lowest intensity, by default True
     """
-    
+
     def __init__(
-        self, 
-        sigma_clip=2.5, 
-        lower_snr=5, 
-        fwhm=5, 
+        self,
+        sigma_clip=2.5,
+        lower_snr=5,
+        fwhm=5,
         n_stars=None,
-        min_separation=None, 
+        min_separation=None,
         sort=True,
-        name=None
+        name=None,
     ):
-        super().__init__(n_stars=n_stars, sort=sort,  min_separation=min_separation, name=name)
+        super().__init__(
+            n_stars=n_stars, sort=sort, min_separation=min_separation, name=name
+        )
         self.sigma_clip = sigma_clip
         self.lower_snr = lower_snr
         self.fwhm = fwhm
@@ -250,7 +245,9 @@ class DAOFindStars(_SimplePointSourceDetection):
         finder = DAOStarFinder(fwhm=self.fwhm, threshold=self.lower_snr * std)
         sources = finder(image.data - median)
 
-        coordinates = np.transpose(np.array([sources["xcentroid"].data, sources["ycentroid"].data]))
+        coordinates = np.transpose(
+            np.array([sources["xcentroid"].data, sources["ycentroid"].data])
+        )
         peaks = sources["peak"]
 
         return coordinates, peaks
@@ -259,6 +256,7 @@ class DAOFindStars(_SimplePointSourceDetection):
     def citations(self):
         return "photutils"
 
+
 try:
     from sep import extract
 except:
@@ -266,14 +264,8 @@ except:
 
 
 class SEDetection(_SimplePointSourceDetection):
-    
     def __init__(
-        self, 
-        threshold=2.5,
-        n_stars=None,
-        min_separation=None, 
-        sort=True,
-        name=None
+        self, threshold=2.5, n_stars=None, min_separation=None, sort=True, name=None
     ):
         """
         Source Extractor detection.
@@ -287,17 +279,19 @@ class SEDetection(_SimplePointSourceDetection):
         n_stars : int, optional
             maximum number of stars to consider, by default None
         min_separation : float, optional
-            minimum separation between sources, by default 5.0. If less than that, close sources are merged 
+            minimum separation between sources, by default 5.0. If less than that, close sources are merged
         sort : bool, optional
             whether to sort stars coordinates from the highest to the lowest intensity, by default True
         """
-        
-        super().__init__(n_stars=n_stars, sort=sort,  min_separation=min_separation, name=name)
+
+        super().__init__(
+            n_stars=n_stars, sort=sort, min_separation=min_separation, name=name
+        )
         self.threshold = threshold
 
     def detect(self, image):
         data = image.data.byteswap().newbyteorder()
-        sep_data = extract(image.data, self.threshold*np.median(data))
+        sep_data = extract(image.data, self.threshold * np.median(data))
         coordinates = np.array([sep_data["x"], sep_data["y"]]).T
         fluxes = np.array(sep_data["flux"])
 

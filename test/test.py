@@ -450,6 +450,10 @@ class TestBlocksDetection(TestBlocks):
         from prose.blocks.detection import _SourceDetection
         self.load("prose.blocks.detection", _SourceDetection)
         self.image = example_image()
+
+    def test_min_separation(self):
+        from prose.blocks.detection import PointSourceDetection
+        PointSourceDetection(min_separation=10)(self.image)
         
 
 if __name__ == "__main__":
