@@ -52,7 +52,9 @@ class _SourceDetection(Block):
                 _sources = _sources[0 : self.n]
             if self.min_separation:
                 idxs = clean_stars_positions(
-                    coords, tolerance=self.min_separation, output_id=True
+                    np.array([s.coords for s in _sources]),
+                    tolerance=self.min_separation,
+                    output_id=True,
                 )[1]
                 _sources = _sources[idxs]
 
