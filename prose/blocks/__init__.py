@@ -7,6 +7,7 @@ from .alignment import *
 from .catalogs import *
 from .photometry import *
 from .utils import *
+from .target import *
 
 
 class DataBlock(Block):
