@@ -20,7 +20,7 @@ class Block(object):
     All prose blocks must be child of this parent class
     """
 
-    def __init__(self, name=None, verbose=False):
+    def __init__(self, name=None, verbose=False, sliding=False):
         _name = self.__class__.__name__
         _issue = f"https://github.com/lgrcia/prose/issues/new?title=Missing+doc+for+{_name}&body=Documentation+is+missing+for+block+{_name}"
 
@@ -34,6 +34,7 @@ class Block(object):
         self.verbose = verbose
 
         self._data_block = False
+        self.sliding = sliding
 
     @property
     def args(self):

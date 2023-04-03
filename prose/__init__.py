@@ -12,7 +12,7 @@ from . import visualization as viz
 
 from .io.fitsmanager import FitsManager
 from .telescope import Telescope
-from .core import Block, Sequence, Image, FITSImage, source
+from .core import Block, Sequence, SlidingSequence, Image, FITSImage, source
 from .fluxes import Fluxes
 from .simulations import example_image
 
